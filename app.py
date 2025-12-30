@@ -21,6 +21,66 @@ import sys
 # --- UI Layout & Styling ---
 st.set_page_config(page_title="Credit Risk AI", page_icon="💳", layout="wide")
 
+# Custom CSS for Modern "Premium" Look
+st.markdown("""
+<style>
+    /* Global Styles */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Headers */
+    h1 {
+        color: #1E3A8A; /* Dark Blue */
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    /* Metrics */
+    div[data-testid="stMetricValue"] {
+        color: #2563EB;
+        font-weight: bold;
+    }
+    
+    /* Buttons */
+    div.stButton > button {
+        background: linear-gradient(90deg, #2563EB 0%, #1E40AF 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        background: linear-gradient(90deg, #1E40AF 0%, #1E3A8A 100%);
+        color: white;
+    }
+
+    /* Cards/Containers */
+    .st-emotion-cache-1y4p8pa {
+        padding: 2rem;
+        border-radius: 15px;
+        background-color: #F3F4F6;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Success/Error boxes */
+    .stSuccess, .stError {
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+</style>
+""", unsafe_allow_html=True)
+
 # Debugging Info (Hidden by default)
 with st.expander("🛠️ Debug Info (Environment)", expanded=False):
     st.write(f"Python Version: {sys.version}")
