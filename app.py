@@ -8,6 +8,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 
 # --- Feature Configuration ---
+BUILD_VERSION = "2025-12-30-V2-Final-Fix"
+
 FEATURES = [
     'person_age', 'person_gender', 'person_education', 'person_income', 
     'person_emp_exp', 'person_home_ownership', 'loan_amnt', 'loan_intent', 
@@ -96,6 +98,8 @@ with st.sidebar.expander("🛠️ Debug Info (Environment)", expanded=True):
         st.write(f"Scikit-Learn Version: {sklearn.__version__}")
     except ImportError:
         st.write("Scikit-Learn NOT FOUND")
+    st.divider()
+    st.write(f"**App Build ID**: `{BUILD_VERSION}`")
 
 # --- Model Logic (Cached) ---
 @st.cache_resource
