@@ -15,40 +15,19 @@ FEATURES = [
     'cb_person_default_on_file', 'cb_person_cred_hist_length'
 ]
 
+import joblib
+
 # --- Model Logic (Cached) ---
 @st.cache_resource
 def load_and_train_model():
-    # Load Data
+    # Load Pre-trained Model
     try:
-        df = pd.read_csv('loan_data.csv')
+        model = joblib.load('loan_approval_model.joblib')
+        return model
     except Exception as e:
-        st.error(f"Erreur de chargement des données: {e}")
+        st.error(f"Erreur de chargement du modèle: {e}")
+        # Optionnel: Re-entraîner si le fichier est manquant (mais déconseillé sur Vercel)
         return None
-
-    # Check Columns
-    available_features = [col for col in FEATURES if col in df.columns]
-    X = df[available_features]
-    y = df['loan_status']
-
-    # Preprocessing
-    cat_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
-    num_cols = X.select_dtypes(include=['number']).columns.tolist()
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1, encoded_missing_value=-1), cat_cols),
-            ('num', 'passthrough', num_cols)
-        ]
-    )
-    
-    # Model
-    model = Pipeline([
-        ('preprocessor', preprocessor),
-        ('classifier', HistGradientBoostingClassifier(learning_rate=0.05, max_depth=10, random_state=42))
-    ])
-
-    model.fit(X, y)
-    return model
 
 # --- UI Layout & Styling ---
 st.set_page_config(page_title="Credit Risk AI", page_icon="💳", layout="wide")
