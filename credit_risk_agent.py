@@ -35,55 +35,38 @@ if missing_cols:
 X = df[features]
 y = df[target]
 
-# Preprocessing
 categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
 numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
 print(f"Categorical columns: {categorical_cols}")
 print(f"Numerical columns: {numerical_cols}")
 
+# Prepare LabelEncoders for app compatibility
+label_encoders = {}
+X_encoded = X.copy()
+for col in categorical_cols:
+    le = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+    X_encoded[col] = le.fit_transform(X[[col]]).flatten()
+    label_encoders[col] = le
+
+# Model execution
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42, stratify=y)
+
 # HistGradientBoostingClassifier handles NaNs natively, but OrdinalEncoder needs help with NaNs in categorical if any
 # However, for simplicity and robustness:
 # We will use OrdinalEncoder for categoricals. 
 # Categorical features in HGBC must be encoded as integers (0 to n_categories - 1).
-
-# Pipeline for categorical features
-# We treat unknown categories as a new category
-cat_transformer = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1, encoded_missing_value=-1)
-
-# Pipeline for numerical features (Pass through or simple imputation? HGBC handles NaNs, so pass through is fine)
-# But strictly speaking, sklearn's OrdinalEncoder might complain if we don't handle it precisely.
-# Let's just use the native support of HGBC for categorical features using 'categorical_features' param?
-# HGBC requires categorical features to be integer-encoded.
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('cat', cat_transformer, categorical_cols),
-        ('num', 'passthrough', numerical_cols)
-    ],
-    verbose_feature_names_out=False
-).set_output(transform="pandas")
 
 # Model
 # Prompt asks for: learning_rate=0.05, max_depth=10
 model = HistGradientBoostingClassifier(
     learning_rate=0.05, 
     max_depth=10, 
-    categorical_features='from_dtype', # This will use the categorical dtype from pandas if set, or we can rely on preprocessor output
     random_state=42
 )
 
-# Since we use OrdinalEncoder, the columns become float/int. We need to tell HGBC which are categorical?
-# Update: Recent sklearn versions: if we pass dataframe with category dtypes, it handles it.
-# Alternative: Use the pipeline output. OrdinalEncoder returns numbers. HGBC treats them as continuous unless specified.
-# Let's map the categorical columns indices after transformation.
-# Actually, simpler approach: Use the Pipeline with the model.
-
-pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                           ('classifier', model)])
-
 # Train Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42, stratify=y)
 
 # We need to specify categorical features for HGBC if we want it to treat them as such.
 # But with OrdinalEncoder, they are just integers.
@@ -93,11 +76,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # I will proceed with fitting.
 
 print("Training model...")
-pipeline.fit(X_train, y_train)
+model.fit(X_train, y_train)
 
 # Evaluation
-y_pred = pipeline.predict(X_test)
-y_proba = pipeline.predict_proba(X_test)[:, 1]
+y_pred = model.predict(X_test)
+y_proba = model.predict_proba(X_test)[:, 1]
 
 auc = roc_auc_score(y_test, y_proba)
 acc = accuracy_score(y_test, y_pred)
@@ -107,6 +90,12 @@ print(f"ROC-AUC: {auc:.4f}")
 print(f"Accuracy: {acc:.4f}")
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
+
+# SAVE Model and Encoders
+import joblib
+joblib.dump(model, 'loan_approval_model.joblib')
+joblib.dump(label_encoders, 'label_encoders.joblib')
+print("\n✅ Modèle et encodeurs sauvegardés !")
 
 # Prediction Function for the verification / usage
 def predict_loan_decision(client_data):
@@ -122,8 +111,14 @@ def predict_loan_decision(client_data):
     if input_df['person_income'].iloc[0] < 0:
         return "Erreur: Revenu négatif."
         
+    # Prepare encoding
+    input_encoded = input_df.copy()
+    for col, le in label_encoders.items():
+        if col in input_encoded.columns:
+            input_encoded[col] = le.transform(input_encoded[[col]]).flatten()
+        
     # Predict
-    prob = pipeline.predict_proba(input_df)[0][1]
+    prob = model.predict_proba(input_encoded)[0][1]
     decision = 1 if prob >= 0.5 else 0 # Default threshold, can be tuned
     status = "APPROUVÉ" if decision == 1 else "REFUSÉ"
     

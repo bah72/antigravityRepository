@@ -185,7 +185,8 @@ if pipeline:
                     # Encoding
                     for col, le in encoders.items():
                         if col in client_data.columns:
-                            client_data[col] = le.transform(client_data[col])
+                            # Use [[col]] to keep 2D for OrdinalEncoder
+                            client_data[col] = le.transform(client_data[[col]]).flatten()
                     
                     # Ensure correct column order
                     client_data = client_data[FEATURES]
