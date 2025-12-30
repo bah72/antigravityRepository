@@ -9,10 +9,10 @@ from sklearn.model_selection import train_test_split
 
 # --- Feature Configuration ---
 FEATURES = [
-    'person_age', 'person_income', 'person_home_ownership', 
-    'person_emp_length', 'loan_intent', 'loan_grade', 
-    'loan_amnt', 'loan_int_rate', 'loan_percent_income', 
-    'cb_person_default_on_file', 'cb_person_cred_hist_length'
+    'person_age', 'person_gender', 'person_education', 'person_income', 
+    'person_emp_exp', 'person_home_ownership', 'loan_amnt', 'loan_intent', 
+    'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length', 
+    'credit_score', 'previous_loan_defaults_on_file'
 ]
 
 import joblib
@@ -82,8 +82,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Debugging Info (Hidden by default)
-with st.expander("🛠️ Debug Info (Environment)", expanded=False):
+# Debugging Info (Sidebar)
+with st.sidebar.expander("🛠️ Debug Info (Environment)", expanded=True):
     st.write(f"Python Version: {sys.version}")
     st.write(f"Joblib Version: {joblib.__version__}")
     try:
@@ -100,14 +100,14 @@ with st.expander("🛠️ Debug Info (Environment)", expanded=False):
 # --- Model Logic (Cached) ---
 @st.cache_resource
 def load_and_train_model():
-    # Load Pre-trained Model
+    # Load Pre-trained Model and Encoders
     try:
         model = joblib.load('loan_approval_model.joblib')
-        return model
+        encoders = joblib.load('label_encoders.joblib')
+        return model, encoders
     except Exception as e:
-        st.error(f"Erreur de chargement du modèle: {e}")
-        # Optionnel: Re-entraîner si le fichier est manquant (mais déconseillé sur Vercel)
-        return None
+        st.error(f"Erreur de chargement du modèle ou des encodeurs: {e}")
+        return None, None
 
 # --- UI Layout & Styling ---
 # Header
@@ -118,7 +118,7 @@ with col_head2:
     st.markdown("---")
 
 # Initialize Model
-pipeline = load_and_train_model()
+pipeline, encoders = load_and_train_model()
 
 if pipeline:
     # Main Container
@@ -129,17 +129,19 @@ if pipeline:
         with col_left:
             st.markdown("### 👤 Informations Client")
             with st.container(border=True):
-                age = st.slider("Âge (ans)", 18, 80, 30)
+                age = st.slider("Âge (ans)", 18, 100, 30)
+                gender = st.selectbox("Genre", ["female", "male"])
+                education = st.selectbox("Éducation", ["High School", "Bachelor", "Associate", "Master", "Doctorate"])
                 income = st.number_input("Revenu Annuel (€)", min_value=0, value=60000, step=1000, format="%d")
-                emp_length = st.slider("Années d'expérience pro", 0, 40, 5)
+                emp_exp = st.slider("Années d'expérience pro", 0, 50, 5)
                 home_ownership = st.selectbox("Type de Résidence", ["RENT", "OWN", "MORTGAGE", "OTHER"])
 
         with col_right:
             st.markdown("### 💰 Détails du Prêt")
             with st.container(border=True):
-                amount = st.number_input("Montant Demandé (€)", min_value=1000, value=10000, step=500, format="%d")
+                amount = st.number_input("Montant Demandé (€)", min_value=500, value=10000, step=500, format="%d")
                 intent = st.selectbox("Motif du Prêt", ["EDUCATION", "MEDICAL", "VENTURE", "PERSONAL", "DEBTCONSOLIDATION", "HOMEIMPROVEMENT"])
-                grade = st.select_slider("Note Interne (Grade)", options=["A", "B", "C", "D", "E", "F", "G"], value="B")
+                credit_score = st.number_input("Score de Crédit", min_value=300, max_value=850, value=650)
                 int_rate = st.slider("Taux d'intérêt (%)", 5.0, 25.0, 11.5, step=0.1)
 
         # Additional Risk Info
@@ -147,7 +149,7 @@ if pipeline:
             col_ex1, col_ex2 = st.columns(2)
             with col_ex1:
                 default_file_disp = st.radio("Défaut de paiement passé ?", ["Non", "Oui"], horizontal=True)
-                default_file = 'Y' if default_file_disp == "Oui" else 'N'
+                default_file = 'Yes' if default_file_disp == "Oui" else 'No'
             with col_ex2:
                 cred_hist = st.number_input("Ancienneté historique (années)", 0, 50, 3)
 
@@ -163,23 +165,37 @@ if pipeline:
             # Prepare Data    
             client_data = pd.DataFrame([{
                 'person_age': age,
+                'person_gender': gender,
+                'person_education': education,
                 'person_income': income,
+                'person_emp_exp': emp_exp,
                 'person_home_ownership': home_ownership,
-                'person_emp_length': emp_length,
-                'loan_intent': intent,
-                'loan_grade': grade,
                 'loan_amnt': amount,
+                'loan_intent': intent,
                 'loan_int_rate': int_rate,
                 'loan_percent_income': percent_income,
-                'cb_person_default_on_file': default_file,
-                'cb_person_cred_hist_length': cred_hist
+                'cb_person_cred_hist_length': cred_hist,
+                'credit_score': credit_score,
+                'previous_loan_defaults_on_file': default_file
             }])
 
             # Processing
             with st.spinner('Analyse par l\'IA en cours...'):
-                prob_default = pipeline.predict_proba(client_data)[0][1] # Prob(1)
-                decision = pipeline.predict(client_data)[0]
-                prob_repay = 1 - prob_default
+                try:
+                    # Encoding
+                    for col, le in encoders.items():
+                        if col in client_data.columns:
+                            client_data[col] = le.transform(client_data[col])
+                    
+                    # Ensure correct column order
+                    client_data = client_data[FEATURES]
+                    
+                    prob_default = pipeline.predict_proba(client_data)[0][1] # Prob(1)
+                    decision = pipeline.predict(client_data)[0]
+                    prob_repay = 1 - prob_default
+                except Exception as e:
+                    st.error(f"Erreur lors de la prédiction : {e}")
+                    st.stop()
 
             # Display Results
             st.markdown("---")
@@ -208,13 +224,12 @@ if pipeline:
             with col_res2:
                  st.metric("Taux d'intérêt", f"{int_rate}%")
             with col_res3:
-                 st.metric("Grade Risque", grade)
+                 st.metric("Score de Crédit", credit_score)
 
             # Justification Text (Styled)
             st.info("💡 **Facteurs Clés** : " + 
                    ("Le ratio dette/revenu est critique. " if percent_income > 0.4 else "Endettement maîtrisé. ") +
-                   ("Historique de paiement négatif détecté. " if default_file == 'Y' else "Historique bancaire sain. ") +
-                   (f"Attention, grade {grade} risqué." if grade in ['D','E','F'] else "")
+                   ("Historique de paiement négatif détecté. " if default_file == 'Yes' else "Historique bancaire sain. ")
             )
 else:
     st.error("Erreur critique : Le modèle n'a pas pu être chargé.")
