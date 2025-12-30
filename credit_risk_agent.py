@@ -18,12 +18,11 @@ except Exception as e:
 
 # Define features and target
 target = 'loan_status'
-# Based on prompt and standard dataset columns
 features = [
-    'person_age', 'person_income', 'person_home_ownership', 
-    'person_emp_length', 'loan_intent', 'loan_grade', 
-    'loan_amnt', 'loan_int_rate', 'loan_percent_income', 
-    'cb_person_default_on_file', 'cb_person_cred_hist_length'
+    'person_age', 'person_gender', 'person_education', 'person_income', 
+    'person_emp_exp', 'person_home_ownership', 'loan_amnt', 'loan_intent', 
+    'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length', 
+    'credit_score', 'previous_loan_defaults_on_file'
 ]
 
 # Check if features exist
@@ -137,7 +136,7 @@ def predict_loan_decision(client_data):
     else:
         analysis.append("Point fort : Ratio dette/revenu raisonnable.")
         
-    if input_df['cb_person_default_on_file'].iloc[0] == 'Y': # Assuming Y/N
+    if input_df['previous_loan_defaults_on_file'].iloc[0] == 'Yes': # Assuming Yes/No
         analysis.append("Point faible : Historique de défaut de paiement.")
     
     # Return formatted info
@@ -153,16 +152,18 @@ if __name__ == "__main__":
     # If args provided, could parse them, but for now just run training and print one example
     example_client = {
         'person_age': 25, 
+        'person_gender': 'male',
+        'person_education': 'Bachelor',
         'person_income': 50000, 
+        'person_emp_exp': 2,
         'person_home_ownership': 'RENT', 
-        'person_emp_length': 2.0, 
-        'loan_intent': 'EDUCATION', 
-        'loan_grade': 'A', 
         'loan_amnt': 8000, 
+        'loan_intent': 'EDUCATION', 
         'loan_int_rate': 11.0, 
         'loan_percent_income': 0.16, 
-        'cb_person_default_on_file': 'N', 
-        'cb_person_cred_hist_length': 3
+        'cb_person_cred_hist_length': 3,
+        'credit_score': 650,
+        'previous_loan_defaults_on_file': 'No'
     }
     print("\nExample Prediction:")
     print(predict_loan_decision(example_client))
