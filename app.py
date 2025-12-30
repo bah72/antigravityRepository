@@ -20,6 +20,7 @@ import sys
 
 # --- UI Layout & Styling ---
 st.set_page_config(page_title="Credit Risk AI", page_icon="💳", layout="wide")
+st.write("### 🚀 Initialisation de l'application...") # Debugging point
 
 # Custom CSS for Modern "Premium" Look
 st.markdown("""
