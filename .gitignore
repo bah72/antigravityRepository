@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Large data/model files (optional, keeping small ones)
+# loan_data.csv 
+
+# IDEs
+.vscode/
+.idea/

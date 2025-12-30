@@ -1,0 +1,23 @@
+Columns in dataset: ['person_age', 'person_gender', 'person_education', 'person_income', 'person_emp_exp', 'person_home_ownership', 'loan_amnt', 'loan_intent', 'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length', 'credit_score', 'previous_loan_defaults_on_file', 'loan_status']
+Warning: Missing columns ['person_emp_length', 'loan_grade', 'cb_person_default_on_file']
+Categorical columns: ['person_home_ownership', 'loan_intent']
+Numerical columns: ['person_age', 'person_income', 'loan_amnt', 'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length']
+Training model...
+
+Model Performance:
+ROC-AUC: 0.9289
+Accuracy: 0.9081
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.91      0.98      0.94      7000
+           1       0.91      0.65      0.76      2000
+
+    accuracy                           0.91      9000
+   macro avg       0.91      0.82      0.85      9000
+weighted avg       0.91      0.91      0.90      9000
+
+
+Example Prediction:
+{'Statut': 'REFUSÉ', 'Confiance': '89.5%', 'Analyse': ['Point fort : Ratio dette/revenu raisonnable.']}
